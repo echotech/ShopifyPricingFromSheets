@@ -24,8 +24,10 @@ with requests.Session() as s:
     cr = csv.reader(decoded_content.splitlines(), delimiter=',')
 
     for row in cr:
+        # Skip CSV Header Row
         if row[2] == "VariantId":
             continue
+        # Skip zero pricing
         if len(row[4]) == 0:
             continue
         price = row[4]
