@@ -30,19 +30,31 @@ with requests.Session() as s:
         # Skip zero pricing
         if len(row[4]) == 0:
             continue
-        price = row[4]
+        csvPrice = row[4]
         variantId = row[2]
+        productId = row[3]
         productName = row[0]
         productVendor = row[1]
+        logging.info("Attempting to update price for product: " + productName + " vendor: " + productVendor)
 
-        variantPutData = '{"variant": {"price": "' + price + '","compare_at_price":""}}'
+        variantGetURL = shopifyURL + variantId + ".json"
+        getCurrentPrice = requests.get(variantGetURL, headers=headers)
+        currentPriceJson = getCurrentPrice.json()
+        currentVariant = currentPriceJson['variant']
+        existingPrice = currentVariant['price']
+
+        if ("$" + existingPrice) == csvPrice:
+            logging.info("Current price is the same as csv price. Skipping.")
+            continue
+
+        variantPutData = '{"variant": {"price": "' + csvPrice + '","compare_at_price":""}}'
 
         variantUrl = shopifyURL + variantId + ".json"
-        logging.info("Attempting to update price for product: " + productName + " vendor: " + productVendor)
+
         putPrice = requests.put(variantUrl, data=variantPutData.encode('utf-8'), headers=headers)
         if putPrice.status_code == 200:
             logging.info("Success: Updated price for product: " + productName + " vendor: " + productVendor)
-            logging.info("Price is now: " + price)
+            logging.info("Price is now: " + csvPrice)
         if putPrice.status_code != 200:
             logging.error("Unable to update price for product: " + productName + " vendor: " + productVendor)
             logging.error(putPrice.status_code)
