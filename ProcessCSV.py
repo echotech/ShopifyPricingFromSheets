@@ -2,6 +2,7 @@ import requests
 import Properties
 import logging
 import csv
+import time
 
 # Set logging level
 logging.basicConfig(level=logging.INFO, filename='./pricing.log', filemode='a',
@@ -13,7 +14,7 @@ shopifyURL = Properties.shopifyURL
 # Go to Google Sheets, File>Publish to Web and publish the sheet as a csv
 sheetsURL = Properties.sheetsURL
 # Headers need to contain your access token and declare json content type 'X-Shopify-Access-Token': 'YOURS', 'Content-type':'application/json'
-headers = {'X-Shopify-Access-Token': '33d82f7196b2d95dec06f5129729aaee', 'Content-type':'application/json'}
+headers = {'X-Shopify-Access-Token': '33d82f7196b2d95dec06f5129729aaee', 'Content-type': 'application/json'}
 
 logging.info("Getting pricing.")
 with requests.Session() as s:
@@ -39,8 +40,20 @@ with requests.Session() as s:
 
         variantGetURL = shopifyURL + variantId + ".json"
         getCurrentPrice = requests.get(variantGetURL, headers=headers)
+        time.sleep(0.5)
+        if getCurrentPrice.status_code != 200:
+            logging.error("Shopify request failed!")
+            logging.error("Attempted to get response from " + variantGetURL)
+            logging.error(getCurrentPrice.status_code)
+            logging.error(getCurrentPrice.reason)
+            logging.error(getCurrentPrice.content)
+
         currentPriceJson = getCurrentPrice.json()
-        currentVariant = currentPriceJson['variant']
+        try:
+            currentVariant = currentPriceJson['variant']
+        except KeyError:
+            logging.error("Couldn't parse current variant from shopify.")
+
         existingPrice = currentVariant['price']
 
         if ("$" + existingPrice) == csvPrice:
@@ -53,11 +66,11 @@ with requests.Session() as s:
 
         putPrice = requests.put(variantUrl, data=variantPutData.encode('utf-8'), headers=headers)
         if putPrice.status_code == 200:
-            logging.info("Success: Updated price for product: " + productName + " vendor: " + productVendor)
-            logging.info("Price is now: " + csvPrice)
+            logging.info("Success: Updated price for product: " + productName + " vendor: " + productVendor + "\n Price is now: " + csvPrice)
         if putPrice.status_code != 200:
             logging.error("Unable to update price for product: " + productName + " vendor: " + productVendor)
             logging.error(putPrice.status_code)
             logging.error(putPrice.reason)
             logging.error(putPrice.content)
 
+        time.sleep(0.5)
