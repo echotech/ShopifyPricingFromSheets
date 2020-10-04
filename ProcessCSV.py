@@ -74,3 +74,5 @@ with requests.Session() as s:
             logging.error(putPrice.content)
 
         time.sleep(0.5)
+
+logging.info("PRICING COMPLETED!")
